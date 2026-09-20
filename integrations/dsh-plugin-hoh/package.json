@@ -1,0 +1,12 @@
+{
+  "name": "dsh-plugin-hoh",
+  "version": "0.1.0",
+  "description": "DeepSeek Harness bridge for the HoH control plane",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": { ".": "./lib/index.js" },
+  "dsh": {
+    "bundle": { "patch": "./cordis.patch.yml" },
+    "client": { "platform": "web", "immediately": true }
+  }
+}

@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HoH 控制平面 | Harness of Harness</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --panel: #1e293b;
+            --border: #334155;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* 侧边栏/导航 */
+        .sidebar {
+            width: 320px;
+            background: var(--panel);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .brand {
+            font-weight: 700;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .badge {
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: rgba(59, 130, 246, 0.2);
+            color: var(--primary);
+        }
+
+        .task-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        .task-item {
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 6px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .task-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .task-item.active {
+            border-color: var(--primary);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .task-title {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .task-meta {
+            font-size: 12px;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* 主工作区 */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .top-bar {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .content {
+            padding: 24px;
+            max-width: 1000px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* 表单 */
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 6px;
+            color: var(--text-muted);
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 10px 12px;
+            background: #090d16;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            border-color: var(--primary);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: all 0.15s;
+        }
+
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-hover); }
+
+        .btn-success { background: var(--success); color: white; }
+        .btn-success:hover { filter: brightness(1.1); }
+
+        .btn-secondary { background: #334155; color: white; }
+        .btn-secondary:hover { background: #475569; }
+
+        /* DAG 步骤展示 */
+        .step-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin: 14px 0;
+        }
+
+        .step-item {
+            background: #090d16;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 12px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .step-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .step-title {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .step-desc {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* 状态流日志控制台 */
+        .log-box {
+            background: #090d16;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 12px;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            max-height: 280px;
+            overflow-y: auto;
+            color: #38bdf8;
+            line-height: 1.5;
+        }
+
+        .status-pill {
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-pending { background: rgba(148, 163, 184, 0.2); color: #cbd5e1; }
+        .status-running { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+        .status-verifying { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+        .status-waiting_approval { background: rgba(245, 158, 11, 0.3); color: #f59e0b; border: 1px solid #f59e0b; }
+        .status-completed { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+        .status-failed { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+    </style>
+</head>
+<body>
+    <!-- 左侧任务列表 -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="brand">
+                <span>⚡ HoH 控制平面</span>
+                <span class="badge">v0.1</span>
+            </div>
+            <button class="btn btn-secondary" style="padding: 4px 8px;" onclick="loadTasks()">刷新</button>
+        </div>
+        <div class="task-list" id="taskList">
+            <!-- 动态填充 -->
+        </div>
+    </div>
+
+    <!-- 右侧主面板 -->
+    <div class="main">
+        <div class="top-bar">
+            <h2 id="viewTitle">任务规划与执行</h2>
+            <div>
+                <button class="btn btn-primary" onclick="showNewTaskModal()">+ 新建规划任务</button>
+            </div>
+        </div>
+
+        <div class="content">
+            <!-- 规划器面板 -->
+            <div class="card" id="plannerCard">
+                <div class="card-title">
+                    <span>目标自动规划 (DAG Planner)</span>
+                </div>
+                <div class="form-group">
+                    <label>目标描述 (Goal)</label>
+                    <input type="text" id="goalInput" placeholder="例如：为项目增加数据导出功能并补齐单元测试" value="为项目增加数据导出功能并补齐单元测试">
+                </div>
+                <div class="form-group">
+                    <label>工作区绝对路径 (Workspace)</label>
+                    <input type="text" id="workspaceInput" value="F:/Tools/HOH">
+                </div>
+                <div class="form-group">
+                    <label>执行首选后端 (Harness)</label>
+                    <select id="harnessSelect">
+                        <option value="auto">auto (由能力模型自动路由)</option>
+                        <option value="hermes">hermes (Hermes Agent)</option>
+                        <option value="dsh">dsh (DeepSeek Harness)</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn btn-secondary" onclick="previewPlan()">预览规划流水线</button>
+                    <button class="btn btn-primary" id="btnMaterialize" style="display: none;" onclick="materializePlan()">确认创建 DAG 任务</button>
+                </div>
+
+                <!-- 步骤预览展示 -->
+                <div id="planPreviewArea" style="display: none; margin-top: 16px;">
+                    <label>生成的 DAG 步骤拓扑：</label>
+                    <div class="step-list" id="stepList"></div>
+                </div>
+            </div>
+
+            <!-- 任务详情与执行面板 -->
+            <div class="card" id="detailCard" style="display: none;">
+                <div class="card-title">
+                    <span id="detailTitle">任务详情</span>
+                    <span id="detailStatus" class="status-pill status-pending">pending</span>
+                </div>
+
+                <div style="margin-bottom: 16px; font-size: 13px; color: var(--text-muted);">
+                    <div><strong>Task ID:</strong> <span id="detailId" style="font-family: var(--font-mono); color: var(--text);"></span></div>
+                    <div style="margin-top: 4px;"><strong>工作区:</strong> <span id="detailWorkspace"></span></div>
+                    <div style="margin-top: 4px;"><strong>执行后端:</strong> <span id="detailHarness"></span></div>
+                </div>
+
+                <div class="form-group">
+                    <label>Prompt / 任务指令：</label>
+                    <textarea id="detailPrompt" rows="3" readonly></textarea>
+                </div>
+
+                <!-- 动作按钮区 -->
+                <div style="margin: 16px 0; display: flex; gap: 10px; align-items: center;" id="actionArea">
+                    <button class="btn btn-primary" id="btnStart" onclick="startCurrentTask()">▶ 启动此步骤</button>
+                    <button class="btn btn-success" id="btnApprove" style="display: none;" onclick="approveCurrentTask()">✔ 批准合并到主分支 (Approve)</button>
+                    <span id="autoPilotTip" style="font-size: 12px; color: #10b981; margin-left: 8px;">⚡ 自动巡航已就绪：完成后将自动流转至下一就绪任务</span>
+                </div>
+
+                <!-- 实时日志与事件流 -->
+                <div class="form-group">
+                    <label>实时事件与状态流 (SSE EventStream)：</label>
+                    <div class="log-box" id="eventLog">暂无事件</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentTaskId = null;
+        let currentTaskHarness = null;
+        let activeEventSource = null;
+
+        // 页面初始化
+        window.addEventListener('DOMContentLoaded', () => {
+            loadTasks();
+        });
+
+        // 加载任务列表
+        async function loadTasks() {
+            try {
+                const res = await fetch('/v1/tasks');
+                const data = await res.json();
+                const list = document.getElementById('taskList');
+                list.innerHTML = '';
+                if (!data.tasks || data.tasks.length === 0) {
+                    list.innerHTML = '<div style="padding: 12px; color: var(--text-muted); font-size: 13px;">暂无任务，请先创建</div>';
+                    return;
+                }
+                data.tasks.forEach(t => {
+                    const item = document.createElement('div');
+                    item.className = `task-item ${currentTaskId === t.id ? 'active' : ''}`;
+                    item.onclick = () => selectTask(t.id);
+                    item.innerHTML = `
+                        <div class="task-title">${escapeHtml(t.title)}</div>
+                        <div class="task-meta">
+                            <span>${t.harness}</span>
+                            <span class="status-pill status-${t.status}">${t.status}</span>
+                        </div>
+                    `;
+                    list.appendChild(item);
+                });
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // 预览规划
+        async function previewPlan() {
+            const goal = document.getElementById('goalInput').value;
+            const workspace = document.getElementById('workspaceInput').value;
+            const harness = document.getElementById('harnessSelect').value;
+
+            try {
+                const res = await fetch('/v1/plans/preview', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ goal, workspace, harness })
+                });
+                const plan = await res.json();
+                if (!res.ok) throw new Error(plan.error || '规划失败');
+
+                const list = document.getElementById('stepList');
+                list.innerHTML = '';
+                plan.steps.forEach((s, idx) => {
+                    const el = document.createElement('div');
+                    el.className = 'step-item';
+                    el.innerHTML = `
+                        <div class="step-info">
+                            <span class="step-title">${idx + 1}. ${escapeHtml(s.title)} <span class="badge">${s.role}</span></span>
+                            <span class="step-desc">${escapeHtml(s.prompt)}</span>
+                        </div>
+                        <div style="text-align: right;">
+                            <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399;">${s.harness}</span>
+                        </div>
+                    `;
+                    list.appendChild(el);
+                });
+
+                document.getElementById('planPreviewArea').style.display = 'block';
+                document.getElementById('btnMaterialize').style.display = 'inline-flex';
+            } catch (e) {
+                alert('预览出错: ' + e.message);
+            }
+        }
+
+        // 物化创建任务
+        async function materializePlan() {
+            const goal = document.getElementById('goalInput').value;
+            const workspace = document.getElementById('workspaceInput').value;
+            const harness = document.getElementById('harnessSelect').value;
+
+            try {
+                const res = await fetch('/v1/plans/materialize', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ goal, workspace, harness })
+                });
+                const result = await res.json();
+                if (!res.ok) throw new Error(result.error || '物化创建失败');
+
+                alert(`成功生成 ${result.tasks.length} 个流水线 DAG 任务！`);
+                document.getElementById('planPreviewArea').style.display = 'none';
+                document.getElementById('btnMaterialize').style.display = 'none';
+                await loadTasks();
+                if (result.tasks.length > 0) {
+                    selectTask(result.tasks[0].id);
+                }
+            } catch (e) {
+                alert('创建出错: ' + e.message);
+            }
+        }
+
+        // 查看特定任务
+        async function selectTask(taskId) {
+            currentTaskId = taskId;
+            loadTasks();
+            const res = await fetch(`/v1/tasks/${taskId}`);
+            const task = await res.json();
+
+            document.getElementById('detailCard').style.display = 'block';
+            document.getElementById('detailTitle').textContent = task.title;
+            document.getElementById('detailId').textContent = task.id;
+            document.getElementById('detailWorkspace').textContent = task.workspace;
+            document.getElementById('detailHarness').textContent = task.harness;
+            currentTaskHarness = task.harness;
+            document.getElementById('detailPrompt').value = task.prompt;
+
+            const statusPill = document.getElementById('detailStatus');
+            statusPill.textContent = task.status;
+            statusPill.className = `status-pill status-${task.status}`;
+
+            // 审批按钮显示
+            const btnApprove = document.getElementById('btnApprove');
+            if (task.status === 'waiting_approval') {
+                btnApprove.style.display = 'inline-flex';
+            } else {
+                btnApprove.style.display = 'none';
+            }
+
+            // 启动 SSE 监听
+            subscribeEvents(taskId);
+        }
+
+        // 订阅实时事件流
+        function subscribeEvents(taskId) {
+            if (activeEventSource) {
+                activeEventSource.close();
+            }
+            const logBox = document.getElementById('eventLog');
+            logBox.innerHTML = '<span style="color:#64748b;">正在连接实时输出流...</span><br>';
+
+            activeEventSource = new EventSource(`/v1/tasks/${taskId}/stream`);
+            activeEventSource.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                const time = new Date(data.created_at).toLocaleTimeString();
+                
+                if (data.type === 'worker.output') {
+                    // 实时字符/文本行流式追加
+                    logBox.innerHTML += escapeHtml(data.payload.chunk).replace(/\n/g, '<br>');
+                } else if (data.type === 'task.status_changed') {
+                    const newStatus = data.payload.status;
+                    logBox.innerHTML += `<div style="margin: 6px 0; padding: 4px 8px; background: rgba(255,255,255,0.05); border-left: 3px solid #3b82f6;">[${time}] <strong>状态变更为: ${newStatus}</strong></div>`;
+                    
+                    const pill = document.getElementById('detailStatus');
+                    pill.textContent = newStatus;
+                    pill.className = `status-pill status-${newStatus}`;
+                    if (newStatus === 'waiting_approval') {
+                        document.getElementById('btnApprove').style.display = 'inline-flex';
+                    }
+                    loadTasks();
+                } else if (data.type === 'task.verification') {
+                    logBox.innerHTML += `<div style="margin: 6px 0; padding: 6px; background: rgba(16,185,129,0.1); border: 1px solid #10b981; border-radius: 4px;"><strong>自动化验收结果:</strong> ${data.payload.passed ? '✔ 通过' : '❌ 失败'}<br>变更文件: ${data.payload.changed_files.join(', ')}</div>`;
+                } else {
+                    logBox.innerHTML += `[${time}] <em>${data.type}</em><br>`;
+                }
+                logBox.scrollTop = logBox.scrollHeight;
+            };
+
+            activeEventSource.onerror = () => {
+                // 连接断开或轮询结束
+            };
+        }
+
+        // 启动任务
+        async function startCurrentTask() {
+            if (!currentTaskId) return;
+            try {
+                // 读取当前任务本身被规划的 harness，直接启动
+                const res = await fetch(`/v1/tasks/${currentTaskId}/start`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ harness: currentTaskHarness || 'auto' })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || '启动失败');
+                loadTasks();
+            } catch (e) {
+                alert('启动出错: ' + e.message);
+            }
+        }
+
+        // 批准合并
+        async function approveCurrentTask() {
+            if (!currentTaskId) return;
+            try {
+                const res = await fetch(`/v1/tasks/${currentTaskId}/approve`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({})
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || '审批失败');
+                alert(`✔ 审批通过！已合并到主分支，Merge SHA: ${data.merge_sha}`);
+                selectTask(currentTaskId);
+            } catch (e) {
+                alert('审批出错: ' + e.message);
+            }
+        }
+
+        function showNewTaskModal() {
+            document.getElementById('plannerCard').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function escapeHtml(str) {
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+    </script>
+</body>
+</html>

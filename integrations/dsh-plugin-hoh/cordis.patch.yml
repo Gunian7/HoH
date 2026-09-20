@@ -1,0 +1,4 @@
+- insert:
+    - id: hoh
+      name: dsh-plugin-hoh
+      inject: [webServer]

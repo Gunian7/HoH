@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+
+# HoH runtime data
+.hoh/
+*.db
+*.db-shm
+*.db-wal
+runs/
+workspaces/
+*-home/
+.e2e*-
+.test-*-home/
+
+# Local environment and editor files
+.env
+.env.*
+!.env.example
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local launchers and generated artifacts
+*.lnk
