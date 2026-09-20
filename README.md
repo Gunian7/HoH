@@ -19,6 +19,7 @@
 - 独立验证命令
 - CLI 创建、运行、查询和 dry-run
 - 本地 HTTP 控制面
+- 内置 Web Dashboard（启动后访问 `http://127.0.0.1:8765/`）
 - SSE 实时事件流
 - 失败任务重试和运行日志保存到 `HOH_HOME/runs/`
 
